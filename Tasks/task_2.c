@@ -25,10 +25,10 @@ Comment your program and explain where and how the problems described above can 
 int main(int argc, char **argv)
 {
 	struct shm_struct {
-		int buffer[BUFFER_SIZE];
+		int buffer[BUFFER_SIZE]; // Turned buffer into an array of size 10
 		unsigned empty;
-		int in;
-		int out;
+		int in; // Keeps track of how many items inserted to buffer
+		int out; // Keeps track of many items removed from buffer
 	};
 	volatile struct shm_struct *shmp = NULL;
 	char *addr = NULL;
@@ -44,31 +44,33 @@ int main(int argc, char **argv)
 	shmp->out = 0;
 	pid = fork();
 	if (pid != 0) {
-		srand(time(NULL));
+		srand(time(NULL)); // set a random seed.
 		/* here's the parent, acting as producer */
 		while (var1 < 100) {
 			/* write to shmem */
 			var1++;
 			while (shmp->empty == 1); /* busy wait until the buffer is empty */
 			printf("Sending %d\n", var1); fflush(stdout);
-			shmp->buffer[shmp->in] = var1;
-			usleep((rand() % 400 + 100) * 1000);
-			shmp->in++;
-			if (shmp->in == 10){
+			shmp->buffer[shmp->in] = var1; // Insert var1 to buffer with index of in
+			usleep((rand() % 400 + 100) * 1000); // Sleep between 0.1s and 0.5s
+			shmp->in++; //increment in
+			// If we have 10 items in the buffer then set empty to 1
+	 		if (shmp->in == 10){
 				shmp->empty = 1;
 			}
 		}
 		shmdt(addr);
 		shmctl(shmid, IPC_RMID, shm_buf);
 	} else {
-		srand(time(NULL) + 1);
+		srand(time(NULL) + 1); // set a different random seed.
 		/* here's the child, acting as consumer */
 		while (var2 < 100) {
 			/* read from shmem */
 			while (shmp->empty == 0); /* busy wait until there is something */
-			var2 = shmp->buffer[shmp->out];	
-			usleep((rand() % 1800 + 200) * 1000);
-			shmp->out++;
+			var2 = shmp->buffer[shmp->out];	 // set var2 to be the same as buffer on index out
+			usleep((rand() % 1800 + 200) * 1000);  // Sleep between 0.2s and 2s
+			shmp->out++; //increment out
+			// If 10 items have been removed then reset the index variables and set empty to 0
 			if(shmp->out == shmp->in){
 				shmp->in = 0;
 				shmp->out = 0;
