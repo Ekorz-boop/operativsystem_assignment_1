@@ -1,11 +1,14 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <time.h>
 #define SHMSIZE 128
 #define SHM_R 0400
 #define SHM_W 0200
+#define BUFFER_SIZE 10
 
 /*  
 Modify the program in Listing 2 (shmem.c) so the buffer contains 10 numbers instead of only one number. Implement it
@@ -22,8 +25,10 @@ Comment your program and explain where and how the problems described above can 
 int main(int argc, char **argv)
 {
 	struct shm_struct {
-		int buffer;
+		int buffer[BUFFER_SIZE];
 		unsigned empty;
+		int in;
+		int out;
 	};
 	volatile struct shm_struct *shmp = NULL;
 	char *addr = NULL;
@@ -35,26 +40,40 @@ int main(int argc, char **argv)
 	shmid = shmget(IPC_PRIVATE, SHMSIZE, IPC_CREAT | SHM_R | SHM_W);
 	shmp = (struct shm_struct *) shmat(shmid, addr, 0);
 	shmp->empty = 0;
+	shmp->in = 0;
+	shmp->out = 0;
 	pid = fork();
 	if (pid != 0) {
+		srand(time(NULL));
 		/* here's the parent, acting as producer */
 		while (var1 < 100) {
 			/* write to shmem */
 			var1++;
 			while (shmp->empty == 1); /* busy wait until the buffer is empty */
 			printf("Sending %d\n", var1); fflush(stdout);
-			shmp->buffer = var1;
-			shmp->empty = 1;
+			shmp->buffer[shmp->in] = var1;
+			usleep((rand() % 400 + 100) * 1000);
+			shmp->in++;
+			if (shmp->in == 10){
+				shmp->empty = 1;
+			}
 		}
 		shmdt(addr);
 		shmctl(shmid, IPC_RMID, shm_buf);
 	} else {
+		srand(time(NULL) + 1);
 		/* here's the child, acting as consumer */
 		while (var2 < 100) {
 			/* read from shmem */
 			while (shmp->empty == 0); /* busy wait until there is something */
-			var2 = shmp->buffer;
-			shmp->empty = 0;
+			var2 = shmp->buffer[shmp->out];	
+			usleep((rand() % 1800 + 200) * 1000);
+			shmp->out++;
+			if(shmp->out == shmp->in){
+				shmp->in = 0;
+				shmp->out = 0;
+				shmp->empty = 0;
+			}
 			printf("Received %d\n", var2); fflush(stdout);
 		}
 		shmdt(addr);
