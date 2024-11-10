@@ -2,16 +2,29 @@
 #include <stdlib.h>
 #include <pthread.h>
 
+
+/*
+Correct the program in Listing 9 (bankaccount.c) by introducing proper synchronizations on shared variables.
+The shared variable(s) that are protected and accessed in critical sections should be locked as short time as possible, i.e.,
+you are supposed to keep the critical sections are short as possible.
+*/
+// Will only lock when depositing or withdrawing to get as small critical regions as possible.
+// We have to lock there though since this affects the shared variable
+
 // Shared Variables
 pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 double bankAccountBalance = 0;
 
 void deposit(double amount) {
+    pthread_mutex_lock(&lock);
     bankAccountBalance += amount;
+    pthread_mutex_unlock(&lock);
 }
 
 void withdraw(double amount) {
+    pthread_mutex_lock(&lock);
     bankAccountBalance -= amount;
+    pthread_mutex_unlock(&lock);
 }
 
 // utility function to identify even-odd numbers
