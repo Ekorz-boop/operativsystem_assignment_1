@@ -2,6 +2,14 @@
 #include <stdlib.h>
 #include <pthread.h>
 
+/*
+Creating a unique struct threadArgs instance for each thread ensures that each thread has its own independent copy of the data it needs.
+Avoiding Data Race Conditions: If all threads shared a single threadArgs struct, they would each overwrite the values of id, numThreads, and squaredId.
+Passing Data Between Threads: Each thread needs to know its unique id and store its calculated squaredId independently.
+Dynamic Allocation for Flexibility: When you dynamically allocate an array of threadArgs, it’s easy to create a variable number of threads
+*/
+
+
 struct threadArgs {
 	unsigned int id;
 	unsigned int numThreads;
