@@ -21,14 +21,14 @@ There are some restrictions for your implementation.
 */
 
 // Defines
-#define num_dudes 5
+#define num_dudes 5 // Define since we need to use this value several times
 
 // Global vars
-pthread_mutex_t *global_chopsticks_locks;
+pthread_mutex_t *chopstick_mutexes;
 pthread_t *philosopher_threads;
 
 // Struct for thread args
-struct threadArgs {
+typedef struct {
     pthread_mutex_t left_stick;
     pthread_mutex_t right_stick;
     char *philosopher_name;
@@ -36,26 +36,75 @@ struct threadArgs {
 
 // Functions
 void* philosopher_thread(void *args) {
-    threadArgs *philosopher = (struct threadArgs *)args; 
-    for (int cycle = 0; cycle < 20; cycle++) { // Do stuff in cycles so they dont just try everything once
+    threadArgs *philosopher = (threadArgs*)args; 
+    for (int cycle = 0; cycle < 5; cycle++) { // Do stuff in cycles so they dont just try everything once
         printf("%s is THINKING\n", philosopher->philosopher_name);
         sleep(rand() % (5 + 1)); // Waiting timer. format: rand() % (upper_bound + lower_bound)
-        printf("%s will try to grab LEFT chopstick", philosopher->philosopher_name);
-        // ADD HERE: lock left stick
-        printf("%s got the LEFT chopstick", philosopher->philosopher_name); // Can only reach here if it actually got it since lock
+        printf("%s will try to grab LEFT chopstick\n", philosopher->philosopher_name);
+
+        // Lock the left stick (i.e. it's taken)
+        pthread_mutex_lock(&philosopher->left_stick);
+
+        printf("%s got the LEFT chopstick\n", philosopher->philosopher_name); // Can only reach here if it actually got it since lock
         sleep(rand() % (8 + 2)); // Waiting timer. format: rand() % (upper_bound + lower_bound)
-        printf("%s will try to grab RIGHT chopstick", philosopher->philosopher_name);
-        // ADD HERE: lock roght stick
-        printf("%s got the RIGHT chopstick", philosopher->philosopher_name); // Can only reach here if it actually got it since lock
-        printf("%s got BOTH chopsticks, is now EATING", philosopher->philosopher_name);
+        printf("%s will try to grab RIGHT chopstick\n", philosopher->philosopher_name);
+
+        // Lock the right stick (i.e. it's taken)
+        pthread_mutex_lock(&philosopher->right_stick);
+
+        printf("%s got the RIGHT chopstick\n", philosopher->philosopher_name); // Can only reach here if it actually got it since lock
+        printf("%s got BOTH chopsticks, is now EATING\n", philosopher->philosopher_name);
         sleep(rand() % (10 + 5)); // Waiting timer. format: rand() % (upper_bound + lower_bound)
-        // ADD HERE: unlock left stick
-        // ADD HERE: unlock right stick
-        printf("%s RELEASED both chopsticks", philosopher->philosopher_name); // Can only reach here if it actually had both and unlocked them since locks
+
+        // Unlock both sticks (i.e. release them)
+        pthread_mutex_unlock(&philosopher->left_stick);
+        pthread_mutex_unlock(&philosopher->right_stick);
+
+        printf("%s RELEASED both chopsticks\n", philosopher->philosopher_name); // Can only reach here if it actually had both and unlocked them since locks
     }
 }
 
 int main() {
     char *philosopher_names[] = {"Tanenbaum", "Bos", "Lamport", "Stallings", "Silberschatz"};
+    // Create and alloc mem for the philosopher threads
+    philosopher_threads = malloc(num_dudes * sizeof(pthread_t));
+    // Create and alloc mem for the args/struct
+    threadArgs *thread_args = malloc(num_dudes * sizeof(threadArgs));
+    // Create and alloc mem for the mutexes
+    chopstick_mutexes = malloc(num_dudes * sizeof(pthread_mutex_t));
+
+    // Go through and initialize all the mutexes
+    for (int i = 0; i < num_dudes; i++) {
+        pthread_mutex_init(&chopstick_mutexes[i], NULL);
+    }
+
+    // Go through and initialize args for each philosopher
+    for (int i = 0; i < num_dudes; i++) {
+        // Provide the sticks mutexes to the philosopher
+        thread_args[i].left_stick = chopstick_mutexes[i];
+		thread_args[i].right_stick = chopstick_mutexes[(i + 1) % num_dudes];
+        // Provide the name for the philosopher
+        thread_args[i].philosopher_name = philosopher_names[i];
+    }
+
+    // Go through and start the threads for each philosopher
+    for (int i = 0; i < num_dudes; i++) {
+        pthread_create(&philosopher_threads[i], NULL, philosopher_thread, &thread_args[i]);
+    }
+
+    // Join the threads when they are finished to terminate them
+    for (int i = 0; i < num_dudes; i++) {
+        pthread_join(philosopher_threads[i], NULL);
+    }
+
+    // Destroy all the mutexes to avoid memory leaks
+    for (int i = 0; i < num_dudes; i++) {
+        pthread_mutex_destroy(&chopstick_mutexes[i]);
+    }
+
+    // Free all the malloced stuff to avoid memory leak
+    free(chopstick_mutexes);
+    free(thread_args);
+    free(philosopher_threads);
 }
 
