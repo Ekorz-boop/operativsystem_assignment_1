@@ -7,9 +7,11 @@
 
 
 /*
+--------- Task 10 ---------
 Implement Dining Professors with five professors according to the description above. The program shall contain five
 threads, where each thread represents one professor. The program must guarantee that only one professor at the time can
 use a chopstick.
+
 • Let the professors think a random time between one and five seconds.
 • Take the left chopstick.
 • When they have gotten the left chopstick, let them think in two to eight seconds.
@@ -17,10 +19,34 @@ use a chopstick.
 • Let the professor eat for a random time between five-ten seconds, and then put down both chopsticks.
 • Write information to the terminal when the professors go from one state to another, e.g., "Tanenbaum: thinking ->
 got left chopstick". Also indicate when a professor tries to take a chopstick.
+
 There are some restrictions for your implementation.
+
 • Each fork should be modeled as a shared resource, which exclusive usage.
 • You are not allowed to look at the state of your neighbors to see if they are eating or not, i.e., the solution in Section
 2.5.1 in the course book [2] is not allowed.
+• You are only allowed to see if the forks to the left and to the right of you are available.
+• You are not allowed to lock the whole table when you examine the availability of the forks.
+
+An implementation done in line with the description above is not deadlock-free, i.e., it may result in a deadlock.
+Explain why, i.e., which conditions lead to the deadlock?
+
+--------- Task 11 ---------
+Modify the program from Task 10 so the program is deadlock-free, i.e., you can guarantee that no deadlock can occur.
+Which are the four conditions for deadlock to occur?
+The four deadlock conditions are:
+1. Mutual exclusion: Resources cannot be shared, i.e., only one process can use a resource at a time.
+2. Hold and wait: A process holding at least one resource is waiting to acquire additional resources held by other
+processes.
+3. No preemption: Resources cannot be taken from a process unless the process releases the resources.
+4. Circular wait: A set of processes must exist such that each process is waiting for a resource held by the next
+
+Which of the four conditions did you remove in order to get a deadlock-free program, and how did you do that in your
+program?
+
+• We removed the circular wait condition by limiting the number of philosophers that can attempt to grab sticks at the same time. 
+Done using a semaphore with value num_dudes - 1. This means that only num_dudes - 1 philosophers can attempt to grab sticks at the same time. 
+This is done to avoid the situation where all philosophers try to grab the left stick at the same time and then all try to grab the right stick at the same time. 
 */
 
 // Defines
