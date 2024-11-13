@@ -29,8 +29,7 @@ typedef struct {
     int i;
 } threadArgs;
 
-threadArgs multiplicaton_args[SIZE];
-
+threadArgs multiplicaton_args[SIZE]; // Array of arguments for each thread
 pthread_t thread_array[SIZE]; // Array of threads
 
 static void
@@ -47,20 +46,6 @@ init_matrix(void)
 	        a[i][j] = 1.0;
 	        b[i][j] = 1.0;
         }
-}
-
-static void
-matmul_seq()
-{
-    int i, j, k;
-
-    for (i = 0; i < SIZE; i++) {
-        for (j = 0; j < SIZE; j++) {
-            c[i][j] = 0.0;
-            for (k = 0; k < SIZE; k++)
-                c[i][j] = c[i][j] + a[i][k] * b[k][j];
-        }
-    }
 }
 
 
