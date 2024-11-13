@@ -1,9 +1,19 @@
 /***************************************************************************
  *
- * Sequential version of Matrix-Matrix multiplication time: 4.81s
+ * Paralell version of matrix-matrix multiplication time:
  *
  ***************************************************************************/
-
+/*
+We will now parallelize the matrix multiplication program using threads. Parallelize the program according to the following
+assumptions:
+• Parallelize only the matrix multiplication, but not the initialization.
+• A new thread shall be created for each row to be calculated in the matrix.
+• The row number of the row that a thread shall calculate, shall be passed to the new thread as a parameter to the new
+thread.
+• The main function shall wait until all threads have terminated before the program terminates.
+Compile and link your parallel version of the matrix multiplication program. Don’t forget to add -lpthread when you
+link your program. We will now measure how much faster the parallel program is as compared to the sequential one.
+*/
 
 #include <stdio.h>
 #include <stdlib.h>
