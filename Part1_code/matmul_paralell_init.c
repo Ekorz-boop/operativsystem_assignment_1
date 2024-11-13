@@ -1,7 +1,8 @@
 /***************************************************************************
  *
- * Paralell version of matrix-matrix multiplication time: less than 1 second
- * Paralell version of matrix-matrix multiplication with paralell initialization time: 
+ * Paralell version of matrix-matrix multiplication time: between 0.5 and 1 second
+ * Paralell version of matrix-matrix multiplication with paralell initialization time:  less than 0.5 seconds 
+ * (got 0 seconds since time resolution is 1 second)
  *
  ***************************************************************************/
 /*
@@ -22,86 +23,54 @@ rows in the matrices a and b. Compile, link, and execute your program.
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <time.h>
 
 #define SIZE 1024
-#define NUM_THREADS 8 // Number of threads
 
 static double a[SIZE][SIZE];
 static double b[SIZE][SIZE];
 static double c[SIZE][SIZE];
 
 typedef struct {
-    int i;
+    int mul_row_index;
 } threadArgs_mul;
 
 typedef struct {
-    int start;
-    int end;
+    int init_row_index;
 } threadArgs_init;
 
 
-threadArgs_mul multiplicaton_args[NUM_THREADS]; // Array of arguments for each thread
-pthread_t thread_array[NUM_THREADS]; // Array of threads
-
-static void
-init_matrix(void)
-{
-    int i, j;
-
-    for (i = 0; i < SIZE; i++)
-        for (j = 0; j < SIZE; j++) {
-	        /* Simple initialization, which enables us to easy check
-	         * the correct answer. Each element in c will have the same
-	         * value as SIZE after the matmul operation.
-	         */
-	        a[i][j] = 1.0;
-	        b[i][j] = 1.0;
-        }
-}
+threadArgs_mul multiplicaton_args[SIZE]; // Array of arguments for each thread (size big since we have one thread per row)
+threadArgs_init initialization_args[SIZE]; // Array of arguments for each thread (size big since we have one thread per row)
+pthread_t thread_array_mul[SIZE]; // Array of threads (size big since we have one thread per row)
+pthread_t thread_array_init[SIZE]; // Array of threads (size big since we have one thread per row)
 
 
 void *mat_init_thread(void *args) {
     threadArgs_init *thread_args = (threadArgs_init*)args;
-    int start = thread_args->start;
-    int end = thread_args->end;
-    for (int i = start; i < end; i++) {
-        // Same as before but only between start and end (since it's paralellized)
-        for (j = 0; j < SIZE; j++) {
-	        /* Simple initialization, which enables us to easy check
-	         * the correct answer. Each element in c will have the same
-	         * value as SIZE after the matmul operation.
-	         */
-	        a[i][j] = 1.0;
-	        b[i][j] = 1.0;
-        }
+
+    // Grab the row (i) to initialize which is fixed for this thread
+    int i = thread_args->init_row_index;
+    // Same calculation as before but only for this i (since it's paralellized)
+    // i is the row number (which is fixed for this thread)
+    // j is the column number (which will be iterated over to fill the entire row)
+    for (int j = 0; j < SIZE; j++) {
+        a[i][j] = 1.0;
+        b[i][j] = 1.0;
     }
 }
 
+
 static void init_matrix_paralell() {
-    // Create thread for each row
+    // Create thread for each row to be initialized
     for (int i = 0; i < SIZE; i++) {
-        multiplicaton_args[i].i = i;
-        pthread_create(&thread_array[i], NULL, mat_init_thread, (void*)&multiplicaton_args[i]);
+        initialization_args[i].init_row_index = i;
+        pthread_create(&thread_array_init[i], NULL, mat_init_thread, (void*)&initialization_args[i]);
     }
 
     // Wait for all threads to finish using join
     for (int i = 0; i < SIZE; i++) {
-        pthread_join(thread_array[i], NULL);
-    }
-}
-
-
-static void
-matmul_seq()
-{
-    int i, j, k;
-
-    for (i = 0; i < SIZE; i++) {
-        for (j = 0; j < SIZE; j++) {
-            c[i][j] = 0.0;
-            for (k = 0; k < SIZE; k++)
-                c[i][j] = c[i][j] + a[i][k] * b[k][j];
-        }
+        pthread_join(thread_array_init[i], NULL);
     }
 }
 
@@ -109,8 +78,8 @@ matmul_seq()
 void *matmul_thread(void *args) {
     threadArgs_mul *thread_args = (threadArgs_mul*)args;
 
-    // Grab the row
-    int i = thread_args->i;
+    // Grab the row (i) which is fixed for this thread
+    int i = thread_args->mul_row_index;
 
     // Same calculation as before but only for this i (since it's paralellized)
     for (int j = 0; j < SIZE; j++) {
@@ -124,13 +93,13 @@ void *matmul_thread(void *args) {
 static void matmul_paralell() {
     // Create thread for each row
     for (int i = 0; i < SIZE; i++) {
-        multiplicaton_args[i].i = i;
-        pthread_create(&thread_array[i], NULL, matmul_thread, (void*)&multiplicaton_args[i]);
+        multiplicaton_args[i].mul_row_index = i;
+        pthread_create(&thread_array_mul[i], NULL, matmul_thread, (void*)&multiplicaton_args[i]);
     }
 
     // Wait for all threads to finish using join
     for (int i = 0; i < SIZE; i++) {
-        pthread_join(thread_array[i], NULL);
+        pthread_join(thread_array_mul[i], NULL);
     }
 }
 
@@ -149,8 +118,12 @@ print_matrix(void)
 
 int
 main(int argc, char **argv)
-{
-    init_matrix();
+{   
+    time_t start, end;
+    start = time(NULL);
+    init_matrix_paralell();
     matmul_paralell();
+    end = time(NULL);
+    printf("Time taken: %ld\n", end - start);
     //print_matrix();
 }
