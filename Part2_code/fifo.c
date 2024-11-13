@@ -25,8 +25,8 @@ int main(int argc, char *argv[]) {
     if (argc < 4) {
         // Print error message if too few arguments
         printf("To few args. Use no_phys_pages, page_size, and filename\n");
-        // Exit with error code -1 (error)
-        exit(-1);
+        // Return with error
+        return 1;
     }
 
     // Grab the arguments
@@ -41,8 +41,14 @@ int main(int argc, char *argv[]) {
     if (page_size_int <= 0 || no_phys_pages_int <= 0) {
         // Print error message
         printf("Invalid page size or invalid number of physical pages\n");
-        // Exit with error code -1 (error)
-        exit(-1);
+        // Return with error
+        return 1;
+    }
+    int first_page = 0; // Need to keep track of first page for FIFO
+    int pages[no_phys_pages_int]; // Create array of pages with size no_phys_pages_int
+    // Loop through the pages and set them to -1 (empty) 
+    for (int i = 0; i < no_phys_pages_int; i++) {
+        pages[i] = -1;
     }
 
     // Print the first two arguments as per instructions
@@ -57,22 +63,57 @@ int main(int argc, char *argv[]) {
     if (input_file == NULL) {
         // Print error message
         printf("Error reading file\n");
-        // Exit with error code -1 (error)
-        exit(-1);
+        // Return with error
+        return 1;
     }
 
     // Set up remaining variables
-    int num_pagefaults = 0;
-    int num_memory_references = 0;
-	size_t line_size = 0;
-	char* line;
-    size_t num_read_chars = 0;
+    int num_pagefaults = 0; // Number of pagefaults
+    int num_memory_references = 0; // Number of memory references
+	size_t line_size = 0; // Size of line
+	char* line = NULL; // Line to read
 
     // Read the file line by line
-    while ((num_read_chars = getline(&line, &line_size, input_file)) != -1) { // While there are lines to read
+    while (getline(&line, &line_size, input_file) != -1) { // While there are lines to read
+        // Increment number of memory references
+        num_memory_references++;
+        // Create bool to check if page is found
+        bool page_found = false;
         // Grab adress from line
         int current_adress = atoi(line);
-        // Calculate the page adress
+        // Calculate the page adress (start of page) which is the current adress minus the remainder of the current adress divided by the page size
         int page_adress = current_adress - (current_adress % page_size_int);
+
+        // Loop through the pages to see if the page is found
+        for (int i = 0; i < no_phys_pages_int; i++) {
+            // If page is found
+            if (pages[i] == page_adress) {
+                // Set page_found to true
+                page_found = true;
+                // Break out of loop
+                break;
+            }
+        }
+
+        // If statement to catch case where page is not found
+        if (!page_found) {
+            // Increment number of pagefaults
+            num_pagefaults++;
+            // Set the page to the current page (replace the oldest page since we are using FIFO)
+            pages[first_page] = page_adress;
+            // Increment first_page (since we are using FIFO)
+            first_page = (first_page + 1) % no_phys_pages_int; // Calculation means that first_page will loop back to 0 if it reaches no_phys_pages_int
+        }
     }
+
+    // Free the line and close the file to avoid memory leaks
+    free(line);
+    fclose(input_file);
+
+    // Print the number of pagefaults as per instructions
+    printf("Read %d memory references\n", num_memory_references);
+    printf("Result: %d page faults\n", num_pagefaults);
+
+    // Exit with success code 0
+    return 0;
 }
