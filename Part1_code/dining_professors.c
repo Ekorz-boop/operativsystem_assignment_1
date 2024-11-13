@@ -1,6 +1,9 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <pthread.h>
+#include <stdio.h> // Include for printf
+#include <stdlib.h> // Include for rand
+#include <pthread.h> // Include for pthread_t, pthread_create, pthread_join, etc.
+#include <semaphore.h> // Include for sem_t
+#include <unistd.h> // Include for sleep
+#include <fcntl.h> // Include for sem_open, sem_destroy, etc.
 
 
 /*
@@ -26,6 +29,8 @@ There are some restrictions for your implementation.
 // Global vars
 pthread_mutex_t *chopstick_mutexes;
 pthread_t *philosopher_threads;
+const char *semaphor_name = "chopstick_attempt_limit"; // Name for the semaphore
+sem_t *chopstick_attempt_limit; // Semaphore to limit the number of philosophers that can attempt to grab sticks at the same time (avoid deadlock)
 
 // Struct for thread args
 typedef struct {
@@ -41,6 +46,9 @@ void* philosopher_thread(void *args) {
         printf("%s is THINKING\n", philosopher->philosopher_name);
         sleep(rand() % (5 + 1)); // Waiting timer. format: rand() % (upper_bound + lower_bound)
         printf("%s will try to grab LEFT chopstick\n", philosopher->philosopher_name);
+        
+        // Wait for the semaphore to be available
+        sem_wait(chopstick_attempt_limit);
 
         // Lock the left stick (i.e. it's taken)
         pthread_mutex_lock(&philosopher->left_stick);
@@ -60,6 +68,9 @@ void* philosopher_thread(void *args) {
         pthread_mutex_unlock(&philosopher->left_stick);
         pthread_mutex_unlock(&philosopher->right_stick);
 
+        // Release the semaphore so other philosophers can try to grab sticks
+        sem_post(chopstick_attempt_limit);
+
         printf("%s RELEASED both chopsticks\n", philosopher->philosopher_name); // Can only reach here if it actually had both and unlocked them since locks
     }
 }
@@ -72,6 +83,9 @@ int main() {
     threadArgs *thread_args = malloc(num_dudes * sizeof(threadArgs));
     // Create and alloc mem for the mutexes
     chopstick_mutexes = malloc(num_dudes * sizeof(pthread_mutex_t));
+
+    // Initialize the semaphore to num_dudes - 1 since that is the max number of philosophers that can attempt to grab sticks at the same time
+    chopstick_attempt_limit = sem_open(semaphor_name, O_CREAT, O_RDWR, num_dudes - 1);
 
     // Go through and initialize all the mutexes
     for (int i = 0; i < num_dudes; i++) {
@@ -92,7 +106,7 @@ int main() {
         pthread_create(&philosopher_threads[i], NULL, philosopher_thread, &thread_args[i]);
     }
 
-    // Join the threads when they are finished to terminate them
+    // Join the threads when they are finished
     for (int i = 0; i < num_dudes; i++) {
         pthread_join(philosopher_threads[i], NULL);
     }
@@ -101,6 +115,9 @@ int main() {
     for (int i = 0; i < num_dudes; i++) {
         pthread_mutex_destroy(&chopstick_mutexes[i]);
     }
+
+    // Destroy the semaphore to avoid memory leaks
+    sem_destroy(chopstick_attempt_limit);
 
     // Free all the malloced stuff to avoid memory leak
     free(chopstick_mutexes);
