@@ -21,17 +21,22 @@ Result: 9218 page faults
 #include <stdlib.h>
 #include <stdbool.h>
 
+// Struct for the page so we can implement the double linked list
 typedef struct Page_struct{
     int adress;
     struct Page_struct* next_page;
 } Page_struct;
 
+// Variables for handling the double linked list (page list)
 int list_length = 0;
 Page_struct *first_page = NULL;
 Page_struct *last_page = NULL;
 
 
 Page_struct *find_page_func(int adress) {
+    /*
+    Function to find a page with a certain adress in the list
+    */
     Page_struct *current_page = first_page;
     while (current_page != NULL) {
         if (current_page->adress == adress) {
@@ -133,30 +138,34 @@ int main(int argc, char *argv[]) {
         else { // Case where we did find the page
             // Move the found page to the end of the list
             if (found_page == first_page) {
-                first_page = found_page->next_page; // Update the head
+                // Update the first page to the next page
+                first_page = found_page->next_page;
                 if (first_page == NULL) { // If list is empty after removal
                     last_page = NULL;
                 }
             } 
             else {
+                // Loop through the list to find the page before the found page
                 Page_struct *prev = first_page;
-                while (prev->next_page != found_page) {
+                while (prev->next_page != found_page) { 
                     prev = prev->next_page;
                 }
-                prev->next_page = found_page->next_page; // Bypass the page
-                if (found_page == last_page) { // Update last_page if necessary
+                // Bypass the found page so it can be moved to the end of the list
+                prev->next_page = found_page->next_page;
+                if (found_page == last_page) { // Case where the found page is the last page
                     last_page = prev;
                 }
             }
-            // Move `found_page` to the end of the list
+            // Insert the found page at the end of the list
             found_page->next_page = NULL;
-            if (last_page != NULL) {
+            if (last_page != NULL) { // If the list is not empty
                 last_page->next_page = found_page;
             }
+            // Update the last page
             last_page = found_page;
 
-            if (first_page == NULL) {
-                first_page = found_page; // Adjust first_page if it was NULL
+            if (first_page == NULL) { // Case where the list is empty
+                first_page = found_page; 
             }
         }
     }
