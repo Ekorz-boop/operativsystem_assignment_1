@@ -21,21 +21,24 @@ Result: 9218 page faults
 #include <stdlib.h>
 #include <stdbool.h>
 
-typedef struct {
+typedef struct Page_struct{
     int adress;
     struct Page_struct* next_page;
 } Page_struct;
 
+int list_length = 0;
+Page_struct *first_page = NULL;
+Page_struct *last_page = NULL;
 
-void lru_insert_page_func(int *input_adress) {
-    return NULL;
-}
 
-void lru_remove_page_func(int *input_adress) {
-    return NULL;
-}
-
-Page_struct* lru_find_page_func(Page_struct *input_page) {
+Page_struct *find_page_func(int adress) {
+    Page_struct *current_page = first_page;
+    while (current_page != NULL) {
+        if (current_page->adress == adress) {
+            return current_page;
+        }
+        current_page = current_page->next_page;
+    }
     return NULL;
 }
 
@@ -85,7 +88,7 @@ int main(int argc, char *argv[]) {
     int num_pagefaults = 0; // Number of pagefaults
     int num_memory_references = 0; // Number of memory references
 	size_t line_size = 0; // Size of line
-	char* line = NULL; // Line to read
+	char *line = NULL; // Line to read
 
     // Read the file line by line
     while (getline(&line, &line_size, input_file) != -1) { // While there are lines to read
@@ -96,15 +99,66 @@ int main(int argc, char *argv[]) {
         // Calculate the page adress (start of page) which is the current adress minus the remainder of the current adress divided by the page size
         int page_adress = current_adress - (current_adress % page_size_int);
 
-        // Use func to find page, save as variable
-        // If we found something then
-        //     Remove the page
-        //     Insert the page
-        // Else
-        //     Increment pagefaults
-        //     If the list is full then
-        //         Remove the head
-        //     Insert the page
+        // Find the page in the list
+        Page_struct *found_page = find_page_func(page_adress);
+        if (found_page == NULL) { // If we did not find the page
+            // Increment number of pagefaults
+            num_pagefaults++;
+            // Check if list is full (remove the first page if it is)
+            if (list_length == no_phys_pages_int) {
+                // Remove first page
+                Page_struct *temp = first_page;
+                first_page = first_page->next_page;
+                free(temp);
+                list_length--;
+            }
+            // Create a new page and insert at current adress
+            Page_struct *new_page = (Page_struct*)malloc(sizeof(Page_struct));
+            new_page->adress = page_adress;
+            new_page->next_page = NULL;
+
+            // If the list is empty, set the first page to the new page
+            if (first_page == NULL) {
+                first_page = new_page;
+                last_page = new_page;
+            }
+            else { // If the list is not empty, set the last page's next page to the new page and set the last page to the new page
+                last_page->next_page = new_page;
+                last_page = new_page;
+            }
+
+            // Increment the list length
+            list_length++;
+        }
+        else { // Case where we did find the page
+            // Move the found page to the end of the list
+            if (found_page == first_page) {
+                first_page = found_page->next_page; // Update the head
+                if (first_page == NULL) { // If list is empty after removal
+                    last_page = NULL;
+                }
+            } 
+            else {
+                Page_struct *prev = first_page;
+                while (prev->next_page != found_page) {
+                    prev = prev->next_page;
+                }
+                prev->next_page = found_page->next_page; // Bypass the page
+                if (found_page == last_page) { // Update last_page if necessary
+                    last_page = prev;
+                }
+            }
+            // Move `found_page` to the end of the list
+            found_page->next_page = NULL;
+            if (last_page != NULL) {
+                last_page->next_page = found_page;
+            }
+            last_page = found_page;
+
+            if (first_page == NULL) {
+                first_page = found_page; // Adjust first_page if it was NULL
+            }
+        }
     }
 
     // Free the line and close the file to avoid memory leaks
