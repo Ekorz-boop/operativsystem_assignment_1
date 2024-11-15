@@ -130,19 +130,23 @@ int main(int argc, char *argv[]) {
     while (getline(&line, &line_size, input_file) != -1) {
         needed_array_size++;
     }
-
-    // Set vars
-    int references[needed_array_size];
-    int ref_count = 0;
-    unsigned long address;
-
     // Reset file pointer so we can read the file again
     fseek(input_file, 0, SEEK_SET);
 
+    // Set the references array to the correct size (should work for all sizes since we calculate it)
+    int references[needed_array_size];
+
+    // Set the vars for reading the file for real this time
+    int ref_count = 0;
+    unsigned long current_address;
+
+    // Read the file and convert the addresses to page numbers
     while (getline(&line, &line_size, input_file) != -1) {
-        address = atoi(line);
-        references[ref_count++] = address / page_size_int; // Convert address to page number
-        if (ref_count >= needed_array_size) break;
+        // Convert the line to an int with atoi
+        current_address = atoi(line);
+
+        // Add the page number to the references array
+        references[ref_count++] = current_address - (current_address % page_size_int);
     }
     fclose(input_file);
     printf("Read %d memory references\n", ref_count);
