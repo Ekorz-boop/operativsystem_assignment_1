@@ -83,42 +83,74 @@ int find_optimal_page_replacement(int *pages, int num_phys_pages, int *access_se
 
 // --- Main program ---
 int main(int argc, char *argv[]) {
-    if (argc != 4) {
-        fprintf(stderr, "Usage: %s no_phys_pages page_size filename\n", argv[0]);
+    // Fail fast if too few arguments
+    if (argc < 4) {
+        // Print error message if too few arguments
+        printf("To few args. Use no_phys_pages, page_size, and filename\n");
+        // Return with error
         return 1;
     }
 
-    int no_phys_pages = atoi(argv[1]);
-    int page_size = atoi(argv[2]);
-    const char *filename = argv[3];
+    // Grab the arguments
+    char* no_phys_pages = argv[1];
+    char* page_size = argv[2];
+    char* filename = argv[3];
 
-    printf("No physical pages = %d, page size = %d\n", no_phys_pages, page_size);
-    printf("Reading memory trace from %s...", filename);
-
-    // Read memory references from file
-    FILE *file = fopen(filename, "r");
-    if (!file) {
-        perror("Error opening file");
+    // Convert arguments to correct types using atoi (ascii to int)
+    int no_phys_pages_int = atoi(no_phys_pages);
+    int page_size_int = atoi(page_size);
+    // Check for invalid page size
+    if (page_size_int <= 0 || no_phys_pages_int <= 0) {
+        // Print error message
+        printf("Invalid page size or invalid number of physical pages\n");
+        // Return with error
         return 1;
     }
 
-    int references[MAX_REFERENCES];
-    int ref_count = 0;
-    unsigned long address;
+    // Print the first two arguments as per instructions
+    printf("No physical pages = %d, page size = %d\n", no_phys_pages_int, page_size_int);
+
+    // Print starting to read memory trace from filename as per instructions
+    printf("Reading memory trace from %s... ", filename);
+
+    // Open dat bad boi
+    FILE *input_file = fopen(filename, "r");
+    // Check for read error
+    if (input_file == NULL) {
+        // Print error message
+        printf("Error reading file\n");
+        // Return with error
+        return 1;
+    }
+
     size_t line_size = 0;
     char *line;
-
-    while (getline(&line, &line_size, file) != -1) {
-        address = atoi(line);
-        references[ref_count++] = address / page_size; // Convert address to page number
-        if (ref_count >= MAX_REFERENCES) break;
+    int needed_array_size = 0;
+    // Calculate how large the references array must be
+    while (getline(&line, &line_size, input_file) != -1) {
+        needed_array_size++;
     }
-    fclose(file);
+
+    // Set vars
+    int references[needed_array_size];
+    int ref_count = 0;
+    unsigned long address;
+
+    // Reset file pointer so we can read the file again
+    fseek(input_file, 0, SEEK_SET);
+
+    while (getline(&line, &line_size, input_file) != -1) {
+        address = atoi(line);
+        references[ref_count++] = address / page_size_int; // Convert address to page number
+        if (ref_count >= needed_array_size) break;
+    }
+    fclose(input_file);
     printf("Read %d memory references\n", ref_count);
 
     // Simulate Optimal Page Replacement
-    int *pages = (int *)malloc(no_phys_pages * sizeof(int));
-    int num_pages = 0, page_faults = 0;
+    int *pages = (int *)malloc(no_phys_pages_int * sizeof(int));
+    int num_pages = 0;
+    int num_page_faults = 0;
 
     for (int i = 0; i < ref_count; i++) {
         int page = references[i];
@@ -133,8 +165,8 @@ int main(int argc, char *argv[]) {
         }
 
         if (!found) { // Page fault
-            page_faults++;
-            if (num_pages < no_phys_pages) {
+            num_page_faults++;
+            if (num_pages < no_phys_pages_int) {
                 pages[num_pages++] = page; // Add page if memory is not full
             } else {
                 // Replace the page using Optimal Replacement Policy
@@ -146,6 +178,6 @@ int main(int argc, char *argv[]) {
 
     free(pages);
 
-    printf("Result: %d page faults\n", page_faults);
+    printf("Result: %d page faults\n", num_page_faults);
     return 0;
 }
