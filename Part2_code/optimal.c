@@ -22,11 +22,12 @@ Result: 824 page faults
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define MAX_REFERENCES 100000
 
 // --- Helper functions ---
-int find_optimal_page_replacement(int *pages, int num_phys_pages, int *access_sequence, int access_sequence_count, int current_index) {
+int find_optimal_page_replacement(int *pages, int num_phys_pages, int *access_sequence, int num_references, int current_index) {
     /*
     Finds the optimal page to replace in memory using the Optimal Replacement Policy (Bélády’s algorithm).
     The optimal page to replace is the one that will not be used again for the longest time in the future.
@@ -46,10 +47,10 @@ int find_optimal_page_replacement(int *pages, int num_phys_pages, int *access_se
     // Loop through all pages in memory
     for (int i = 0; i < num_phys_pages; i++) {
         // Variable to keep track of if the page is used again or not
-        int next_use_index = access_sequence_count;
+        int next_use_index = num_references;
 
         // Loop through the rest of the access sequence to find the next use of the page
-        for (int j = current_index + 1; j < access_sequence_count; j++) {
+        for (int j = current_index + 1; j < num_references; j++) {
             if (pages[i] == access_sequence[j]) { // Page is used again (i.e. found in the access sequence)
                 if (j > max_distance) {
                     // Set max distance to current distance (j)
@@ -64,7 +65,7 @@ int find_optimal_page_replacement(int *pages, int num_phys_pages, int *access_se
             }
         }
         // Check if page is ever used again or not (if the value is the same as the input count, it was not used again)
-        if (next_use_index == access_sequence_count) {
+        if (next_use_index == num_references) {
             // Return the page that is never used again
             return i;
         }
@@ -133,11 +134,11 @@ int main(int argc, char *argv[]) {
     // Reset file pointer so we can read the file again
     fseek(input_file, 0, SEEK_SET);
 
-    // Set the references array to the correct size (should work for all sizes since we calculate it)
-    int references[needed_array_size];
+    // Set the reference_order (references) array to the correct size (should work for all sizes since we calculate it)
+    int access_sequence[needed_array_size];
 
     // Set the vars for reading the file for real this time
-    int ref_count = 0;
+    int num_of_references = 0;
     unsigned long current_address;
 
     // Read the file and convert the addresses to page numbers
@@ -146,42 +147,61 @@ int main(int argc, char *argv[]) {
         current_address = atoi(line);
 
         // Add the page number to the references array
-        references[ref_count++] = current_address - (current_address % page_size_int);
+        access_sequence[num_of_references++] = current_address - (current_address % page_size_int);
     }
+    // Close the file
     fclose(input_file);
-    printf("Read %d memory references\n", ref_count);
 
-    // Simulate Optimal Page Replacement
+    // Print the number of memory references read
+    printf("Read %d memory references\n", num_of_references);
+
+    // Create the pages array which will hold the pages in memory (not to be confused with references)
     int *pages = (int *)malloc(no_phys_pages_int * sizeof(int));
     int num_pages = 0;
     int num_page_faults = 0;
 
-    for (int i = 0; i < ref_count; i++) {
-        int page = references[i];
-        int found = 0;
+    // Loop through all references
+    for (int i = 0; i < num_of_references; i++) {
+        // Get the page number from the references array
+        int page = access_sequence[i];
+
+        // Bool for determining if the page is found in memory
+        bool is_found = false;
 
         // Check if page is already in memory
         for (int j = 0; j < num_pages; j++) {
             if (pages[j] == page) {
-                found = 1;
+                is_found = true;
                 break;
             }
         }
 
-        if (!found) { // Page fault
+        // Case where it is not found in memory (page fault)
+        if (!is_found) {
+            // Increment the number of page faults
             num_page_faults++;
+
+            // Check if past the number of physical pages
             if (num_pages < no_phys_pages_int) {
-                pages[num_pages++] = page; // Add page if memory is not full
-            } else {
-                // Replace the page using Optimal Replacement Policy
-                int replace_index = find_optimal_page_replacement(pages, num_pages, references, ref_count, i);
+                // Add the page (which is reference i) to memory
+                pages[num_pages++] = page;
+            } 
+            else {
+                // Find the optimal page to replace
+                int replace_index = find_optimal_page_replacement(pages, num_pages, access_sequence, num_of_references, i);
+
+                // Replace the page
                 pages[replace_index] = page;
             }
         }
     }
 
+    // Free the pages array
     free(pages);
 
+    // Print the result as per instructions
     printf("Result: %d page faults\n", num_page_faults);
+
+    // Return with success
     return 0;
 }
