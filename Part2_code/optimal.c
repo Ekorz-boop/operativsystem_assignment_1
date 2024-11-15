@@ -25,29 +25,63 @@ Result: 824 page faults
 
 #define MAX_REFERENCES 100000
 
-// Function to find the page to replace based on the future references
-int find_page_to_replace(int *pages, int num_pages, int *references, int ref_count, int current_index) {
-    int farthest = -1;
-    int replace_index = -1;
+// --- Helper functions ---
+int find_optimal_page_replacement(int *pages, int num_phys_pages, int *access_sequence, int access_sequence_count, int current_index) {
+    /*
+    Finds the optimal page to replace in memory using the Optimal Replacement Policy (Bélády’s algorithm).
+    The optimal page to replace is the one that will not be used again for the longest time in the future.
+    Arguments:
+    - pages: Array of page numbers currently in memory
+    - num_phys_pages: Number of physical pages in memory
+    - access_sequence: Array of memory references
+    - access_sequence_count: Number of memory references
+    - current_index: Index of the current memory reference in the access sequence
+    Returns:
+    - Index of the page to replace in the pages array
+    */
+    // Vars needed to keep track of the page with the longest distance to the next use
+    int max_distance = -1;
+    int current_output = -1;
 
-    for (int i = 0; i < num_pages; i++) {
-        int j;
-        for (j = current_index + 1; j < ref_count; j++) {
-            if (pages[i] == references[j]) {
-                if (j > farthest) {
-                    farthest = j;
-                    replace_index = i;
+    // Loop through all pages in memory
+    for (int i = 0; i < num_phys_pages; i++) {
+        // Variable to keep track of if the page is used again or not
+        int next_use_index = access_sequence_count;
+
+        // Loop through the rest of the access sequence to find the next use of the page
+        for (int j = current_index + 1; j < access_sequence_count; j++) {
+            if (pages[i] == access_sequence[j]) { // Page is used again (i.e. found in the access sequence)
+                if (j > max_distance) {
+                    // Set max distance to current distance (j)
+                    max_distance = j;
+
+                    // Set the current output to the index of the page in memory (i)
+                    current_output = i;
                 }
+                // Before breaking, set the next use index to the current index so we can check if the page is used again
+                next_use_index = j;
                 break;
             }
         }
-        if (j == ref_count) { // Page not used again
+        // Check if page is ever used again or not (if the value is the same as the input count, it was not used again)
+        if (next_use_index == access_sequence_count) {
+            // Return the page that is never used again
             return i;
         }
     }
-    return (replace_index != -1) ? replace_index : 0; // Default to first page if all are equally far
+
+    // Check if the current output is -1 (i.e. no page was used again)
+    if (current_output == -1) {
+        // If no page was used again, return the last page in memory
+        return num_phys_pages - 1;
+    }
+
+    // Return the page that is used the furthest in the future
+    return current_output;
 }
 
+
+// --- Main program ---
 int main(int argc, char *argv[]) {
     if (argc != 4) {
         fprintf(stderr, "Usage: %s no_phys_pages page_size filename\n", argv[0]);
@@ -104,7 +138,7 @@ int main(int argc, char *argv[]) {
                 pages[num_pages++] = page; // Add page if memory is not full
             } else {
                 // Replace the page using Optimal Replacement Policy
-                int replace_index = find_page_to_replace(pages, num_pages, references, ref_count, i);
+                int replace_index = find_optimal_page_replacement(pages, num_pages, references, ref_count, i);
                 pages[replace_index] = page;
             }
         }
