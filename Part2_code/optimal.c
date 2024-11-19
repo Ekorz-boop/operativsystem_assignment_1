@@ -24,7 +24,6 @@ Result: 824 page faults
 #include <string.h>
 #include <stdbool.h>
 
-#define MAX_REFERENCES 100000
 
 // --- Helper functions ---
 int find_optimal_page_replacement(int *pages, int num_phys_pages, int *access_sequence, int num_references, int current_index) {
@@ -85,7 +84,7 @@ int find_optimal_page_replacement(int *pages, int num_phys_pages, int *access_se
 // --- Main program ---
 int main(int argc, char *argv[]) {
     // Fail fast if too few arguments
-    if (argc < 4) {
+    if (argc != 4) {
         // Print error message if too few arguments
         printf("To few args. Use no_phys_pages, page_size, and filename\n");
         // Return with error
@@ -139,15 +138,16 @@ int main(int argc, char *argv[]) {
 
     // Set the vars for reading the file for real this time
     int num_of_references = 0;
-    unsigned long current_address;
+    unsigned long current_address; // Address of the current line in the file. Need to have outside loop since we need it after the loop
 
     // Read the file and convert the addresses to page numbers
     while (getline(&line, &line_size, input_file) != -1) {
         // Convert the line to an int with atoi
         current_address = atoi(line);
-
+        // calc page number
+        int page_number = current_address - (current_address % page_size_int);
         // Add the page number to the references array
-        access_sequence[num_of_references++] = current_address - (current_address % page_size_int);
+        access_sequence[num_of_references++] = page_number;
     }
     // Close the file
     fclose(input_file);
@@ -185,7 +185,7 @@ int main(int argc, char *argv[]) {
             if (num_pages < no_phys_pages_int) {
                 // Add the page (which is reference i) to memory
                 pages[num_pages++] = page;
-            } 
+            }
             else {
                 // Find the optimal page to replace
                 int replace_index = find_optimal_page_replacement(pages, num_pages, access_sequence, num_of_references, i);

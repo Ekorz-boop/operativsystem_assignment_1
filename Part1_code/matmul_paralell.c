@@ -1,6 +1,6 @@
 /***************************************************************************
  *
- * Paralell version of matrix-matrix multiplication time: between 0.5 and 1 second (time resolution is 1 second and got 1)
+ * Paralell version of matrix-matrix multiplication time: 0.899s
  *
  ***************************************************************************/
 /*
@@ -18,7 +18,6 @@ link your program. We will now measure how much faster the parallel program is a
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <time.h>
 
 #define SIZE 1024
 
@@ -94,11 +93,7 @@ print_matrix(void)
 int
 main(int argc, char **argv)
 {   
-    time_t start, end;
-    start = time(NULL);
     init_matrix();
     matmul_paralell();
-    end = time(NULL);
-    printf("Time: %ld\n", end - start);
     //print_matrix();
 }

@@ -1,8 +1,6 @@
 /***************************************************************************
  *
- * Paralell version of matrix-matrix multiplication time: between 0.5 and 1 second
- * Paralell version of matrix-matrix multiplication with paralell initialization time:  less than 0.5 seconds 
- * (got 0 seconds since time resolution is 1 second)
+ * Paralell version of matrix-matrix multiplication with paralell initialization time: 0.798s
  *
  ***************************************************************************/
 /*
@@ -23,7 +21,6 @@ rows in the matrices a and b. Compile, link, and execute your program.
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <time.h>
 
 #define SIZE 1024
 
@@ -119,11 +116,6 @@ print_matrix(void)
 int
 main(int argc, char **argv)
 {   
-    time_t start, end;
-    start = time(NULL);
     init_matrix_paralell();
     matmul_paralell();
-    end = time(NULL);
-    printf("Time taken: %ld\n", end - start);
-    //print_matrix();
 }

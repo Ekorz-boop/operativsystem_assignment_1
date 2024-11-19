@@ -1,6 +1,6 @@
 /***************************************************************************
  *
- * Sequential version of Matrix-Matrix multiplication time: 4.81s
+ * Sequential version of Matrix-Matrix multiplication time: 6.991s
  *
  ***************************************************************************/
 

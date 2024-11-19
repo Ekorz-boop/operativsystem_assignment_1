@@ -22,7 +22,7 @@ Result: 11940 page faults
 
 int main(int argc, char *argv[]) {
     // Fail fast if too few arguments
-    if (argc < 4) {
+    if (argc != 4) {
         // Print error message if too few arguments
         printf("To few args. Use no_phys_pages, page_size, and filename\n");
         // Return with error
@@ -44,6 +44,7 @@ int main(int argc, char *argv[]) {
         // Return with error
         return 1;
     }
+    
     int first_page = 0; // Need to keep track of first page for FIFO
     int pages[no_phys_pages_int]; // Create array of pages with size no_phys_pages_int
     // Loop through the pages and set them to -1 (empty) 

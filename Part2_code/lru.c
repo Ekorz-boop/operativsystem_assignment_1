@@ -109,7 +109,8 @@ int main(int argc, char *argv[]) {
         if (found_page == NULL) { // If we did not find the page
             // Increment number of pagefaults
             num_pagefaults++;
-            // Check if list is full (remove the first page if it is)
+            // Check if list is full (remove the first page if it is). The list can only be full if the list length is equal to the number of physical pages
+            // This is because we only add pages to the list if they are not already in the list (i.e. we did not find the page)
             if (list_length == no_phys_pages_int) {
                 // Remove first page
                 Page_struct *temp = first_page;
@@ -117,7 +118,7 @@ int main(int argc, char *argv[]) {
                 free(temp);
                 list_length--;
             }
-            // Create a new page and insert at current adress
+            // Create a new page and insert current adress
             Page_struct *new_page = (Page_struct*)malloc(sizeof(Page_struct));
             new_page->adress = page_adress;
             new_page->next_page = NULL;
@@ -143,7 +144,7 @@ int main(int argc, char *argv[]) {
                 if (first_page == NULL) { // If list is empty after removal
                     last_page = NULL;
                 }
-            } 
+            }
             else {
                 // Loop through the list to find the page before the found page
                 Page_struct *prev = first_page;
@@ -154,7 +155,7 @@ int main(int argc, char *argv[]) {
                 prev->next_page = found_page->next_page;
                 if (found_page == last_page) { // Case where the found page is the last page
                     last_page = prev;
-                }
+                } 
             }
             // Insert the found page at the end of the list
             found_page->next_page = NULL;
@@ -181,4 +182,3 @@ int main(int argc, char *argv[]) {
     // Exit with success code 0
     return 0;
 }
-
